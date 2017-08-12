@@ -3,24 +3,22 @@
         "caption": "Preferences",
         "mnemonic": "n",
         "id": "preferences",
-        "children":
-        [
+        "children": [
             {
                 "caption": "Package Settings",
                 "mnemonic": "P",
                 "id": "package-settings",
-                "children":
-                [
+                "children": [
                     {
-                        "caption": "rsub",
-                        "children":
-                        [
+                        "caption": "RemoteSub",
+                        "children": [
                             {
-                                "command": "open_file",
-                                "args": {"file": "${packages}/rsub/rsub.sublime-settings"},
-                                "caption": "Settings – Default"
-                            },
-                            { "caption": "-" }
+                                "caption": "Settings",
+                                "command": "edit_settings",
+                                "args": {
+                                    "base_file": "${packages}/RemoteSub/remotesub.sublime-settings"
+                                }
+                            }
                         ]
                     }
                 ]

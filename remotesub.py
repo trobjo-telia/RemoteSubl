@@ -3,27 +3,20 @@ import sublime_plugin
 import os
 import tempfile
 import socket
+import subprocess
 from threading import Thread
 try:
     import socketserver
 except ImportError:
     import SocketServer as socketserver
-try:
-    from ScriptingBridge import SBApplication
-except ImportError:
-    SBApplication = None
 
-'''
-Problems:
-Double line breaks on Windows.
-'''
 
 SESSIONS = {}
 server = None
 
 
 def say(msg):
-    print('[rsub] ' + msg)
+    print('[remotesub] ' + msg)
 
 
 class Session:
@@ -89,9 +82,10 @@ class Session:
         # multiple files with the same basename to be edited at once without
         # overwriting each other.
         try:
-            self.temp_dir = tempfile.mkdtemp(prefix='rsub-')
+            self.temp_dir = tempfile.mkdtemp(prefix='remotesub-')
         except OSError as e:
-            sublime.error_message('Failed to create rsub temporary directory! Error: %s' % e)
+            sublime.error_message(
+                'Failed to create remotesub temporary directory! Error: {}'.format(e))
             return
         self.temp_path = os.path.join(self.temp_dir,
                                       os.path.basename(self.env['display-name'].split(':')[-1]))
@@ -120,22 +114,44 @@ class Session:
 
         # Add the file metadata to the view's settings
         # This is mostly useful to obtain the path of this file on the server
-        view.settings().set('rsub', self.env)
+        view.settings().set('remotesub', self.env)
 
         # Add the session to the global list
         SESSIONS[view.id()] = self
 
         # Bring sublime to front
         if(sublime.platform() == 'osx'):
-            if(SBApplication):
-                subl_window = SBApplication.applicationWithBundleIdentifier_("com.sublimetext.2")
-                subl_window.activate()
-            else:
-                os.system("/usr/bin/osascript -e '%s'" %
-                          'tell app "Finder" to set frontmost of process "Sublime Text" to true')
+            os.system("/usr/bin/osascript -e '%s'" %
+                      'tell app "Finder" to set frontmost of process "Sublime Text" to true')
         elif(sublime.platform() == 'linux'):
-            import subprocess
             subprocess.call("wmctrl -xa 'sublime_text.sublime-text-2'", shell=True)
+
+
+class RemoteSubEventListener(sublime_plugin.EventListener):
+    def on_post_save_async(self, view):
+        env = view.settings().get('remotesub', {})
+        if env:
+            display_name = env['display-name']
+            try:
+                if view.id() not in SESSIONS:
+                    raise
+
+                sess = SESSIONS[view.id()]
+                sess.send_save()
+                say('Saved ' + display_name)
+                sublime.set_timeout(
+                    lambda: sublime.status_message("Saved {}".format(display_name)))
+            except:
+                say('Error saving {}.'.format(display_name))
+                sublime.set_timeout(
+                    lambda: sublime.status_message("Error saving {}.".format(display_name)))
+
+    def on_close(self, view):
+        env = view.settings().get('remotesub', {})
+        if env and view.id() in SESSIONS:
+            sess = SESSIONS.pop(view.id())
+            sess.close()
+            say('Closed ' + sess.env['display-name'])
 
 
 class ConnectionHandler(socketserver.BaseRequestHandler):
@@ -143,7 +159,7 @@ class ConnectionHandler(socketserver.BaseRequestHandler):
         say('New connection from ' + str(self.client_address))
 
         session = Session(self.request)
-        self.request.send(b"Sublime Text 2 (rsub plugin)\n")
+        self.request.send(b"Sublime Text 3 (remotesub plugin)\n")
 
         socket_fd = self.request.makefile("rb")
         while True:
@@ -159,10 +175,6 @@ class TCPServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
 
 
-def start_server():
-    server.serve_forever()
-
-
 def unload_handler():
     global server
     say('Killing server...')
@@ -171,33 +183,15 @@ def unload_handler():
         server.server_close()
 
 
-class RSubEventListener(sublime_plugin.EventListener):
-    def on_post_save(self, view):
-        if (view.id() in SESSIONS):
-            sess = SESSIONS[view.id()]
-            sess.send_save()
-            say('Saved ' + sess.env['display-name'])
-
-    def on_close(self, view):
-        if(view.id() in SESSIONS):
-            sess = SESSIONS.pop(view.id())
-            sess.close()
-            say('Closed ' + sess.env['display-name'])
-
-
 def plugin_loaded():
     global SESSIONS, server
 
     # Load settings
-    settings = sublime.load_settings("rsub.sublime-settings")
+    settings = sublime.load_settings("remotesub.sublime-settings")
     port = settings.get("port", 52698)
     host = settings.get("host", "localhost")
 
     # Start server thread
     server = TCPServer((host, port), ConnectionHandler)
-    Thread(target=start_server, args=[]).start()
-    say('Server running on ' + host + ':' + str(port) + '...')
-
-# call the plugin_loaded() function if running in sublime text 2
-if (int(sublime.version())< 3000):
-    plugin_loaded()
+    Thread(target=server.serve_forever, args=[]).start()
+    say('Server running on {}:{} ...'.format(host, str(port)))

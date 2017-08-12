@@ -1,0 +1,14 @@
+{
+    /*
+        listen host
+
+        WARNING: it's NOT recommended to change this option,
+        use SSH tunneling instead.
+    */
+    "host": "localhost",
+
+    /*
+        listen port
+    */
+    "port": 52698
+}
