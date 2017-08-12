@@ -1,9 +1,0 @@
-[submodule "rmate-bash"]
-	path = rmate-bash
-	url = https://github.com/aurora/rmate.git
-[submodule "rmate-ruby"]
-	path = rmate-ruby
-	url = https://github.com/textmate/rmate.git
-[submodule "rmate-js"]
-	path = rmate-js
-	url = git@github.com:jrnewell/jmate.git
