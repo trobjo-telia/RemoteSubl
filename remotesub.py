@@ -4,6 +4,7 @@ import os
 import tempfile
 import socket
 import subprocess
+from time import strftime
 from threading import Thread
 try:
     import socketserver
@@ -15,8 +16,30 @@ SESSIONS = {}
 server = None
 
 
+def subl(*args):
+    executable_path = sublime.executable_path()
+    if sublime.platform() == 'osx':
+        app_path = executable_path[:executable_path.rfind('.app/') + 5]
+        executable_path = app_path + 'Contents/SharedSupport/bin/subl'
+    subprocess.Popen([executable_path] + list(args))
+
+    def on_activated():
+        window = sublime.active_window()
+        view = window.active_view()
+
+        if sublime.platform() == 'windows':
+            # fix focus on windows
+            window.run_command('focus_neighboring_group')
+            window.focus_view(view)
+
+        sublime_plugin.on_activated(view.id())
+        sublime_plugin.on_activated_async(view.id())
+
+    sublime.set_timeout(on_activated, 300)
+
+
 def say(msg):
-    print('[remotesub] ' + msg)
+    print('[remotesub {}]: {}'.format(strftime("%H:%M:%S"), msg))
 
 
 class Session:
@@ -110,7 +133,10 @@ class Session:
             sublime.run_command("new_window")
 
         # Open it within sublime
-        view = sublime.active_window().open_file(self.temp_path)
+        view = sublime.active_window().open_file(
+            "{0}:{1}:0".format(
+                self.temp_path, self.env['selection'] if 'selection' in self.env else 0),
+            sublime.ENCODED_POSITION)
 
         # Add the file metadata to the view's settings
         # This is mostly useful to obtain the path of this file on the server
@@ -119,12 +145,8 @@ class Session:
         # Add the session to the global list
         SESSIONS[view.id()] = self
 
-        # Bring sublime to front
-        if(sublime.platform() == 'osx'):
-            os.system("/usr/bin/osascript -e '%s'" %
-                      'tell app "Finder" to set frontmost of process "Sublime Text" to true')
-        elif(sublime.platform() == 'linux'):
-            subprocess.call("wmctrl -xa 'sublime_text.sublime-text-2'", shell=True)
+        # Bring sublime to front by running `subl --command ""`
+        subl("--command", "")
 
 
 class RemoteSubEventListener(sublime_plugin.EventListener):
@@ -148,10 +170,15 @@ class RemoteSubEventListener(sublime_plugin.EventListener):
 
     def on_close(self, view):
         env = view.settings().get('remotesub', {})
-        if env and view.id() in SESSIONS:
-            sess = SESSIONS.pop(view.id())
-            sess.close()
-            say('Closed ' + sess.env['display-name'])
+        if env:
+            display_name = env['display-name']
+            if view.id() in SESSIONS:
+                sess = SESSIONS.pop(view.id())
+            try:
+                sess.close()
+                say('Closed ' + display_name)
+            except:
+                say('Error closing {}.'.format(display_name))
 
 
 class ConnectionHandler(socketserver.BaseRequestHandler):
