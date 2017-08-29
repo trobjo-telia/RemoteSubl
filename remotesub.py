@@ -147,6 +147,7 @@ class Session:
 
         # Bring sublime to front by running `subl --command ""`
         subl("--command", "")
+        view.run_command("remote_sub_update_status_bar")
 
 
 class RemoteSubEventListener(sublime_plugin.EventListener):
@@ -179,6 +180,9 @@ class RemoteSubEventListener(sublime_plugin.EventListener):
                 say('Closed ' + display_name)
             except:
                 say('Error closing {}.'.format(display_name))
+
+    def on_activated(self, view):
+        view.run_command("remote_sub_update_status_bar")
 
 
 class ConnectionHandler(socketserver.BaseRequestHandler):
@@ -222,3 +226,16 @@ def plugin_loaded():
     server = TCPServer((host, port), ConnectionHandler)
     Thread(target=server.serve_forever, args=[]).start()
     say('Server running on {}:{} ...'.format(host, str(port)))
+
+
+class RemoteSubUpdateStatusBarCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit):
+
+        env = self.view.settings().get('remotesub', {})
+        if env:
+            display_name = env['display-name']
+            if display_name:
+                self.view.set_status("remotesub_status", "[{}]".format(display_name))
+        else:
+            self.view.erase_status("remotesub_status")
