@@ -4,7 +4,8 @@ RemoteSubl starts as a fork of [rsub](https://github.com/henrikpersson/rsub) to 
 
 Comparing to rsub, the followings are enhanced:
 
-- support multiple files via `rmate foo bar`
+- support multiple files via `rmate foo bar`.
+- use the same view when opening the same file twice.
 - better status bar messages when savning a file or when encountering errors.
 - improve the way to bring up Sublime Text on different platforms.
 

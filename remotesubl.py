@@ -74,16 +74,25 @@ class File:
         self.session.socket.send(new_file)
         self.session.socket.send(b"\n")
 
-    def open(self):
+    def get_temp_dir(self):
+        # First determine if the file has been sent before.
+        for f in FILES.values():
+            if f.env["real-path"] == self.env["real-path"] and \
+                    ":" in self.env["display-name"] and \
+                    f.env["display-name"] == self.env["display-name"]:
+                return f.temp_dir
+
         # Create a secure temporary directory, both for privacy and to allow
         # multiple files with the same basename to be edited at once without
         # overwriting each other.
         try:
-            self.temp_dir = tempfile.mkdtemp(prefix='remotesubl-')
+            return tempfile.mkdtemp(prefix='remotesubl-')
         except OSError as e:
             sublime.error_message(
                 'Failed to create remotesubl temporary directory! Error: {}'.format(e))
-            return
+
+    def open(self):
+        self.temp_dir = self.get_temp_dir()
         self.temp_path = os.path.join(
             self.temp_dir,
             os.path.basename(self.env['display-name'].split(':')[-1]))
@@ -93,6 +102,7 @@ class File:
             temp_file.flush()
             temp_file.close()
         except IOError as e:
+            print(e)
             # Remove the file if it exists.
             if os.path.exists(self.temp_path):
                 os.remove(self.temp_path)
