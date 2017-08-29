@@ -56,12 +56,13 @@ class File:
             self.data = self.data[:self.env["data"]]
             self.ready = True
 
-    def close(self):
+    def close(self, remove=True):
         self.session.socket.send(b"close\n")
         self.session.socket.send(b"token: " + self.env['token'].encode("utf8") + b"\n")
         self.session.socket.send(b"\n")
-        os.unlink(self.temp_path)
-        os.rmdir(self.temp_dir)
+        if remove:
+            os.unlink(self.temp_path)
+            os.rmdir(self.temp_dir)
         self.session.try_close()
 
     def save(self):
@@ -128,6 +129,10 @@ class File:
         view.settings().set('remotesubl', self.env)
 
         # Add the file to the global list
+        if view.id() in FILES:
+            file = FILES.pop(view.id())
+            file.close(remove=False)
+
         FILES[view.id()] = self
 
         # Bring sublime to front by running `subl --command ""`
