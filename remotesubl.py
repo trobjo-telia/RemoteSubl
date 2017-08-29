@@ -128,7 +128,8 @@ class File:
         # This is mostly useful to obtain the path of this file on the server
         view.settings().set('remotesubl', self.env)
 
-        # Add the file to the global list
+        # if the current view is attahced to another file object,
+        # that file object has to be closed first.
         if view.id() in FILES:
             file = FILES.pop(view.id())
             try:
@@ -137,6 +138,7 @@ class File:
             except:
                 pass
 
+        # Add the file to the global list
         FILES[view.id()] = self
 
         # Bring sublime to front by running `subl --command ""`
