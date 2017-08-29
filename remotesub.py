@@ -146,6 +146,9 @@ class Session:
                 self.file = None
             return
 
+        if not self.file:
+            return
+
         # prase settings
         input_line = input_line.decode("utf8").strip()
         if ":" not in input_line:
