@@ -131,7 +131,11 @@ class File:
         # Add the file to the global list
         if view.id() in FILES:
             file = FILES.pop(view.id())
-            file.close(remove=False)
+            try:
+                # connection may have lost
+                file.close(remove=False)
+            except:
+                pass
 
         FILES[view.id()] = self
 
