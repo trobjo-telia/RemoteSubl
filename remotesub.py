@@ -12,7 +12,7 @@ except ImportError:
     import SocketServer as socketserver
 
 
-SESSIONS = {}
+FILES = {}
 server = None
 
 
@@ -40,65 +40,41 @@ def say(msg):
     print('[remotesub {}]: {}'.format(strftime("%H:%M:%S"), msg))
 
 
-class Session:
-    def __init__(self, socket):
+class File:
+    def __init__(self, session):
+        self.session = session
         self.env = {}
-        self.file = b""
-        self.file_size = 0
-        self.in_file = False
-        self.parse_done = False
-        self.socket = socket
+        self.data = b""
+        self.ready = False
         self.temp_path = None
 
-    def parse_input(self, input_line):
-        if (input_line.strip() == b"open" or self.parse_done is True):
-            return
+    def append(self, line):
+        if len(self.data) < self.env["data"]:
+            self.data += line
 
-        if(self.in_file is False):
-            input_line = input_line.decode("utf8").strip()
-            if (input_line == ""):
-                return
-            if (input_line == "."):
-                self.parse_file(b".\n")
-                return
-            k, v = input_line.split(":", 1)
-            if (k == "data"):
-                self.file_size = int(v)
-                if len(self.env) > 1:
-                    self.in_file = True
-            else:
-                self.env[k] = v.strip()
-        else:
-            self.parse_file(input_line)
-
-    def parse_file(self, line):
-        if(len(self.file) >= self.file_size and line == b".\n"):
-            self.in_file = False
-            self.parse_done = True
-            sublime.set_timeout(self.on_done, 0)
-        else:
-            self.file += line
+        if len(self.data) >= self.env["data"]:
+            self.data = self.data[:self.env["data"]]
+            self.ready = True
 
     def close(self):
-        self.socket.send(b"close\n")
-        self.socket.send(b"token: " + self.env['token'].encode("utf8") + b"\n")
-        self.socket.send(b"\n")
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
+        self.session.socket.send(b"close\n")
+        self.session.socket.send(b"token: " + self.env['token'].encode("utf8") + b"\n")
+        self.session.socket.send(b"\n")
         os.unlink(self.temp_path)
         os.rmdir(self.temp_dir)
+        self.session.try_close()
 
-    def send_save(self):
-        self.socket.send(b"save\n")
-        self.socket.send(b"token: " + self.env['token'].encode("utf8") + b"\n")
+    def save(self):
+        self.session.socket.send(b"save\n")
+        self.session.socket.send(b"token: " + self.env['token'].encode("utf8") + b"\n")
         temp_file = open(self.temp_path, "rb")
         new_file = temp_file.read()
         temp_file.close()
-        self.socket.send(b"data: " + str(len(new_file)).encode("utf8") + b"\n")
-        self.socket.send(new_file)
-        self.socket.send(b"\n")
+        self.session.socket.send(b"data: " + str(len(new_file)).encode("utf8") + b"\n")
+        self.session.socket.send(new_file)
+        self.session.socket.send(b"\n")
 
-    def on_done(self):
+    def open(self):
         # Create a secure temporary directory, both for privacy and to allow
         # multiple files with the same basename to be edited at once without
         # overwriting each other.
@@ -112,7 +88,7 @@ class Session:
                                       os.path.basename(self.env['display-name'].split(':')[-1]))
         try:
             temp_file = open(self.temp_path, "wb+")
-            temp_file.write(self.file[:self.file_size])
+            temp_file.write(self.data)
             temp_file.flush()
             temp_file.close()
         except IOError as e:
@@ -140,12 +116,54 @@ class Session:
         # This is mostly useful to obtain the path of this file on the server
         view.settings().set('remotesub', self.env)
 
-        # Add the session to the global list
-        SESSIONS[view.id()] = self
+        # Add the file to the global list
+        FILES[view.id()] = self
 
         # Bring sublime to front by running `subl --command ""`
         subl("--command", "")
         view.run_command("remote_sub_update_status_bar")
+
+
+class Session:
+    def __init__(self, socket):
+        self.socket = socket
+        self.parsing_data = False
+        self.nconn = 0
+        self.file = None
+
+    def parse_input(self, input_line):
+        if input_line.strip() == b"open":
+            self.file = File(self)
+            self.nconn += 1
+            return
+
+        if self.parsing_data:
+            self.file.append(input_line)
+            if self.file.ready:
+                self.file.open()
+                self.parsing_data = False
+                self.file = None
+            return
+
+        # prase settings
+        input_line = input_line.decode("utf8").strip()
+        if ":" not in input_line:
+            # not a setting
+            return
+
+        k, v = input_line.split(":", 1)
+
+        if k == "data":
+            self.file.env[k] = int(v.strip())
+            self.parsing_data = True
+        else:
+            self.file.env[k] = v.strip()
+
+    def try_close(self):
+        self.nconn -= 1
+        if self.nconn == 0:
+            self.socket.shutdown(socket.SHUT_RDWR)
+            self.socket.close()
 
 
 class RemoteSubEventListener(sublime_plugin.EventListener):
@@ -154,11 +172,11 @@ class RemoteSubEventListener(sublime_plugin.EventListener):
         if env:
             display_name = env['display-name']
             try:
-                if view.id() not in SESSIONS:
+                if view.id() not in FILES:
                     raise
 
-                sess = SESSIONS[view.id()]
-                sess.send_save()
+                file = FILES[view.id()]
+                file.save()
                 say('Saved ' + display_name)
                 sublime.set_timeout(
                     lambda: sublime.status_message("Saved {}".format(display_name)))
@@ -171,10 +189,10 @@ class RemoteSubEventListener(sublime_plugin.EventListener):
         env = view.settings().get('remotesub', {})
         if env:
             display_name = env['display-name']
-            if view.id() in SESSIONS:
-                sess = SESSIONS.pop(view.id())
+            if view.id() in FILES:
+                file = FILES.pop(view.id())
             try:
-                sess.close()
+                file.close()
                 say('Closed ' + display_name)
             except:
                 say('Error closing {}.'.format(display_name))
@@ -213,7 +231,7 @@ def unload_handler():
 
 
 def plugin_loaded():
-    global SESSIONS, server
+    global FILES, server
 
     # Load settings
     settings = sublime.load_settings("remotesub.sublime-settings")
@@ -233,7 +251,8 @@ class RemoteSubUpdateStatusBarCommand(sublime_plugin.TextCommand):
         env = self.view.settings().get('remotesub', {})
         if env:
             display_name = env['display-name']
-            if display_name:
-                self.view.set_status("remotesub_status", "[{}]".format(display_name))
+            if not display_name:
+                display_name = "untitled"
+            self.view.set_status("remotesub_status", "[{}]".format(display_name))
         else:
             self.view.erase_status("remotesub_status")
