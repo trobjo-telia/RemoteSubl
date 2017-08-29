@@ -84,8 +84,9 @@ class File:
             sublime.error_message(
                 'Failed to create remotesub temporary directory! Error: {}'.format(e))
             return
-        self.temp_path = os.path.join(self.temp_dir,
-                                      os.path.basename(self.env['display-name'].split(':')[-1]))
+        self.temp_path = os.path.join(
+            self.temp_dir,
+            os.path.basename(self.env['display-name'].split(':')[-1]))
         try:
             temp_file = open(self.temp_path, "wb+")
             temp_file.write(self.data)
@@ -178,8 +179,15 @@ class RemoteSubEventListener(sublime_plugin.EventListener):
                 file = FILES[view.id()]
                 file.save()
                 say('Saved ' + display_name)
+
+                file_name = os.path.basename(display_name.split(':')[-1])
+                if ":" in display_name:
+                    server_name = os.path.basename(display_name.split(':')[0])
+                else:
+                    server_name = "remote server"
                 sublime.set_timeout(
-                    lambda: sublime.status_message("Saved {}".format(display_name)))
+                    lambda: sublime.status_message("Saved {} to {}.".format(
+                        file_name, server_name)))
             except:
                 say('Error saving {}.'.format(display_name))
                 sublime.set_timeout(
@@ -251,8 +259,10 @@ class RemoteSubUpdateStatusBarCommand(sublime_plugin.TextCommand):
         env = self.view.settings().get('remotesub', {})
         if env:
             display_name = env['display-name']
-            if not display_name:
-                display_name = "untitled"
-            self.view.set_status("remotesub_status", "[{}]".format(display_name))
+            if ":" in display_name:
+                server_name = os.path.basename(display_name.split(':')[0])
+            else:
+                server_name = "remote"
+            self.view.set_status("remotesub_status", "[{}]".format(server_name))
         else:
             self.view.erase_status("remotesub_status")
