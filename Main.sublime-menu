@@ -10,13 +10,13 @@
                 "id": "package-settings",
                 "children": [
                     {
-                        "caption": "RemoteSub",
+                        "caption": "RemoteSubl",
                         "children": [
                             {
                                 "caption": "Settings",
                                 "command": "edit_settings",
                                 "args": {
-                                    "base_file": "${packages}/RemoteSub/remotesub.sublime-settings"
+                                    "base_file": "${packages}/RemoteSubl/remotesubl.sublime-settings"
                                 }
                             }
                         ]

@@ -37,7 +37,7 @@ def subl(*args):
 
 
 def say(msg):
-    print('[remotesub {}]: {}'.format(strftime("%H:%M:%S"), msg))
+    print('[remotesubl {}]: {}'.format(strftime("%H:%M:%S"), msg))
 
 
 class File:
@@ -79,10 +79,10 @@ class File:
         # multiple files with the same basename to be edited at once without
         # overwriting each other.
         try:
-            self.temp_dir = tempfile.mkdtemp(prefix='remotesub-')
+            self.temp_dir = tempfile.mkdtemp(prefix='remotesubl-')
         except OSError as e:
             sublime.error_message(
-                'Failed to create remotesub temporary directory! Error: {}'.format(e))
+                'Failed to create remotesubl temporary directory! Error: {}'.format(e))
             return
         self.temp_path = os.path.join(
             self.temp_dir,
@@ -115,14 +115,14 @@ class File:
 
         # Add the file metadata to the view's settings
         # This is mostly useful to obtain the path of this file on the server
-        view.settings().set('remotesub', self.env)
+        view.settings().set('remotesubl', self.env)
 
         # Add the file to the global list
         FILES[view.id()] = self
 
         # Bring sublime to front by running `subl --command ""`
         subl("--command", "")
-        view.run_command("remote_sub_update_status_bar")
+        view.run_command("remote_subl_update_status_bar")
 
 
 class Session:
@@ -170,9 +170,9 @@ class Session:
             self.socket.close()
 
 
-class RemoteSubEventListener(sublime_plugin.EventListener):
+class RemoteSublEventListener(sublime_plugin.EventListener):
     def on_post_save_async(self, view):
-        env = view.settings().get('remotesub', {})
+        env = view.settings().get('remotesubl', {})
         if env:
             display_name = env['display-name']
             try:
@@ -197,7 +197,7 @@ class RemoteSubEventListener(sublime_plugin.EventListener):
                     lambda: sublime.status_message("Error saving {}.".format(display_name)))
 
     def on_close(self, view):
-        env = view.settings().get('remotesub', {})
+        env = view.settings().get('remotesubl', {})
         if env:
             display_name = env['display-name']
             if view.id() in FILES:
@@ -209,7 +209,7 @@ class RemoteSubEventListener(sublime_plugin.EventListener):
                 say('Error closing {}.'.format(display_name))
 
     def on_activated(self, view):
-        view.run_command("remote_sub_update_status_bar")
+        view.run_command("remote_subl_update_status_bar")
 
 
 class ConnectionHandler(socketserver.BaseRequestHandler):
@@ -217,7 +217,7 @@ class ConnectionHandler(socketserver.BaseRequestHandler):
         say('New connection from ' + str(self.client_address))
 
         session = Session(self.request)
-        self.request.send(b"Sublime Text 3 (remotesub plugin)\n")
+        self.request.send(b"Sublime Text 3 (remotesubl plugin)\n")
 
         socket_fd = self.request.makefile("rb")
         while True:
@@ -245,7 +245,7 @@ def plugin_loaded():
     global FILES, server
 
     # Load settings
-    settings = sublime.load_settings("remotesub.sublime-settings")
+    settings = sublime.load_settings("remotesubl.sublime-settings")
     port = settings.get("port", 52698)
     host = settings.get("host", "localhost")
 
@@ -255,11 +255,11 @@ def plugin_loaded():
     say('Server running on {}:{} ...'.format(host, str(port)))
 
 
-class RemoteSubUpdateStatusBarCommand(sublime_plugin.TextCommand):
+class RemoteSublUpdateStatusBarCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
 
-        env = self.view.settings().get('remotesub', {})
+        env = self.view.settings().get('remotesubl', {})
         if env:
             display_name = env['display-name']
             if ":" in display_name:
