@@ -263,7 +263,7 @@ def unload_handler():
 
 
 def plugin_loaded():
-    global FILES, server
+    global server
 
     # Load settings
     settings = sublime.load_settings("remotesubl.sublime-settings")
