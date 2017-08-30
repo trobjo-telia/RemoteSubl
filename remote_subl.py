@@ -12,6 +12,9 @@ except ImportError:
     import SocketServer as socketserver
 
 
+CREATE_TEMP_FILE_ERROR = "Failed to create remote_subl temporary directory! Error: {}"
+WRITE_TEMP_FILE_ERROR = "Failed to write to temp file! Error: {}"
+CONNECTION_LOST = "Connection to {} is lost."
 FILES = {}
 server = None
 
@@ -86,8 +89,7 @@ class File:
         try:
             return tempfile.mkdtemp(prefix=(self.host or "remote_subl") + "-")
         except OSError as e:
-            sublime.error_message(
-                'Failed to create remote_subl temporary directory! Error: {}'.format(e))
+            sublime.message_dialog(CREATE_TEMP_FILE_ERROR.format(e))
 
     def open(self):
         self.temp_dir = self.get_temp_dir()
@@ -109,7 +111,7 @@ class File:
             except OSError:
                 pass
 
-            sublime.error_message('Failed to write to temp file! Error: %s' % str(e))
+            sublime.message_dialog(WRITE_TEMP_FILE_ERROR.format(e))
 
         # create new window if needed
         if len(sublime.windows()) == 0 or "new" in self.env:
@@ -251,7 +253,9 @@ class RemoteSublUpdateStatusBarCommand(sublime_plugin.TextCommand):
 
 class ConnectionHandler(socketserver.BaseRequestHandler):
     def handle(self):
-        say('New connection from ' + str(self.client_address))
+        address = str(self.client_address)
+
+        say('New connection from ' + address)
 
         session = Session(self.request)
         self.request.send(b"Sublime Text 3 (remote_subl plugin)\n")
@@ -263,7 +267,23 @@ class ConnectionHandler(socketserver.BaseRequestHandler):
                 break
             session.parse_input(line)
 
-        say('Connection from {} is closed.'.format(str(self.client_address)))
+        self.cleanup(session)
+        say('Connection from {} is closed.'.format(address))
+
+    def cleanup(self, session):
+        settings = sublime.load_settings("remote_subl.sublime-settings")
+        vid_to_pop = []
+        for vid, file in FILES.items():
+            if file.session == session:
+                # only show message once
+                if not vid_to_pop:
+                    if settings.get("pop_up_when_connection_lost", True):
+                        sublime.message_dialog(
+                            CONNECTION_LOST.format(file.host or "remote"))
+                vid_to_pop.append(vid)
+
+        for vid in vid_to_pop:
+            FILES.pop(vid)
 
 
 class TCPServer(socketserver.ThreadingTCPServer):

@@ -10,5 +10,10 @@
     /*
         listen port
     */
-    "port": 52698
+    "port": 52698,
+
+    /*
+        display a dialog when connection is lost
+    */
+    "pop_up_when_connection_lost": true
 }
