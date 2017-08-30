@@ -6,10 +6,7 @@ import socket
 import subprocess
 from time import strftime
 from threading import Thread
-try:
-    import socketserver
-except ImportError:
-    import SocketServer as socketserver
+import socketserver
 
 
 CREATE_TEMP_FILE_ERROR = "Failed to create remote_subl temporary directory! Error: {}"
@@ -79,7 +76,7 @@ class File:
     def get_temp_dir(self):
         # First determine if the file has been sent before.
         for f in FILES.values():
-            if f.env["real-path"] == self.env["real-path"] and \
+            if f.env["real-path"] and f.env["real-path"] == self.env["real-path"] and \
                     f.host and f.host == self.host:
                 return f.temp_dir
 
@@ -97,18 +94,15 @@ class File:
             self.temp_dir,
             self.base_name)
         try:
-            temp_file = open(self.temp_path, "wb+")
-            temp_file.write(self.data)
-            temp_file.flush()
-            temp_file.close()
+            with open(self.temp_path, "wb+") as temp_file:
+                temp_file.write(self.data)
+                temp_file.flush()
         except IOError as e:
-            print(e)
-            # Remove the file if it exists.
-            if os.path.exists(self.temp_path):
-                os.remove(self.temp_path)
             try:
+                # Remove the file if it exists.
+                os.remove(self.temp_path)
                 os.rmdir(self.temp_dir)
-            except OSError:
+            except:
                 pass
 
             sublime.message_dialog(WRITE_TEMP_FILE_ERROR.format(e))
@@ -183,13 +177,18 @@ class Session:
         if k == "data":
             self.file.file_size = int(v)
             self.parsing_data = True
-        elif k == "display-name":
-            if ":" in v:
-                self.file.host, self.file.base_name = v.split(":")
+
+            if ":" in self.file.env["display-name"]:
+                host, base_name = self.file.env["display-name"].split(":", 1)
+                self.file.host = host
+                self.file.base_name = os.path.basename(base_name)
             else:
                 self.file.host = None
-        elif k == "token":
-            self.file.base_name = os.path.basename(v)
+                self.file.base_name = os.path.basename(self.file.env["display-name"])
+
+            if self.file.env["token"] == "-":
+                # stdin input
+                self.file.base_name = "untitled"
 
     def send(self, string):
         if not isinstance(string, bytes):
@@ -263,7 +262,7 @@ class ConnectionHandler(socketserver.BaseRequestHandler):
         socket_fd = self.request.makefile("rb")
         while True:
             line = socket_fd.readline()
-            if(len(line) == 0):
+            if len(line) == 0:
                 break
             session.parse_input(line)
 
