@@ -37,7 +37,7 @@ def subl(*args):
 
 
 def say(msg):
-    print('[remotesubl {}]: {}'.format(strftime("%H:%M:%S"), msg))
+    print('[remote_subl {}]: {}'.format(strftime("%H:%M:%S"), msg))
 
 
 class File:
@@ -46,14 +46,13 @@ class File:
         self.env = {}
         self.data = b""
         self.ready = False
-        self.temp_path = None
 
     def append(self, line):
-        if len(self.data) < self.env["data"]:
+        if len(self.data) < self.file_size:
             self.data += line
 
-        if len(self.data) >= self.env["data"]:
-            self.data = self.data[:self.env["data"]]
+        if len(self.data) >= self.file_size:
+            self.data = self.data[:self.file_size]
             self.ready = True
 
     def close(self, remove=True):
@@ -79,24 +78,23 @@ class File:
         # First determine if the file has been sent before.
         for f in FILES.values():
             if f.env["real-path"] == self.env["real-path"] and \
-                    ":" in self.env["display-name"] and \
-                    f.env["display-name"] == self.env["display-name"]:
+                    f.host and f.host == self.host:
                 return f.temp_dir
 
         # Create a secure temporary directory, both for privacy and to allow
         # multiple files with the same basename to be edited at once without
         # overwriting each other.
         try:
-            return tempfile.mkdtemp(prefix='remotesubl-')
+            return tempfile.mkdtemp(prefix='remote_subl-')
         except OSError as e:
             sublime.error_message(
-                'Failed to create remotesubl temporary directory! Error: {}'.format(e))
+                'Failed to create remote_subl temporary directory! Error: {}'.format(e))
 
     def open(self):
         self.temp_dir = self.get_temp_dir()
         self.temp_path = os.path.join(
             self.temp_dir,
-            os.path.basename(self.env['display-name'].split(':')[-1]))
+            self.base_name)
         try:
             temp_file = open(self.temp_path, "wb+")
             temp_file.write(self.data)
@@ -125,8 +123,8 @@ class File:
             sublime.ENCODED_POSITION)
 
         # Add the file metadata to the view's settings
-        # This is mostly useful to obtain the path of this file on the server
-        view.settings().set('remotesubl', self.env)
+        view.settings().set('remote_subl.host', self.host)
+        view.settings().set('remote_subl.base_name', self.base_name)
 
         # if the current view is attahced to another file object,
         # that file object has to be closed first.
@@ -177,12 +175,19 @@ class Session:
             return
 
         k, v = input_line.split(":", 1)
+        k = k.strip()
+        v = v.strip()
+        self.file.env[k] = v
 
         if k == "data":
-            self.file.env[k] = int(v.strip())
+            self.file.file_size = int(v)
             self.parsing_data = True
-        else:
-            self.file.env[k] = v.strip()
+        elif k == "display-name":
+            if ":" in v:
+                self.file.host, self.file.base_name = v.split(":")
+            else:
+                self.file.host = None
+                self.file.base_name = v
 
     def try_close(self):
         self.nconn -= 1
@@ -193,44 +198,50 @@ class Session:
 
 class RemoteSublEventListener(sublime_plugin.EventListener):
     def on_post_save_async(self, view):
-        env = view.settings().get('remotesubl', {})
-        if env:
-            display_name = env['display-name']
+        base_name = view.settings().get('remote_subl.base_name')
+        if base_name:
+            host = view.settings().get('remote_subl.host', "remote server")
             try:
-                if view.id() not in FILES:
-                    raise
-
                 file = FILES[view.id()]
                 file.save()
-                say('Saved ' + display_name)
+                say('Saved {} to {}.'.format(base_name, host))
 
-                file_name = os.path.basename(display_name.split(':')[-1])
-                if ":" in display_name:
-                    server_name = os.path.basename(display_name.split(':')[0])
-                else:
-                    server_name = "remote server"
                 sublime.set_timeout(
                     lambda: sublime.status_message("Saved {} to {}.".format(
-                        file_name, server_name)))
+                        base_name, host)))
             except:
-                say('Error saving {}.'.format(display_name))
+                say('Error saving {} to {}.'.format(base_name, host))
                 sublime.set_timeout(
-                    lambda: sublime.status_message("Error saving {}.".format(display_name)))
+                    lambda: sublime.status_message(
+                        "Error saving {} to {}.".format(base_name, host)))
 
     def on_close(self, view):
-        env = view.settings().get('remotesubl', {})
-        if env:
-            display_name = env['display-name']
-            if view.id() in FILES:
-                file = FILES.pop(view.id())
+        base_name = view.settings().get('remote_subl.base_name')
+        if base_name:
+            host = view.settings().get('remote_subl.host', "remote server")
             try:
+                file = FILES.pop(view.id())
                 file.close()
-                say('Closed ' + display_name)
+                say('Closed {} in {}.'.format(base_name, host))
             except:
-                say('Error closing {}.'.format(display_name))
+                say('Error closing {} in {}.'.format(base_name, host))
 
     def on_activated(self, view):
-        view.run_command("remote_subl_update_status_bar")
+        base_name = view.settings().get('remote_subl.base_name')
+        if base_name:
+            view.run_command("remote_subl_update_status_bar")
+
+
+class RemoteSublUpdateStatusBarCommand(sublime_plugin.TextCommand):
+
+    def run(self, edit):
+        view = self.view
+        if view.id() in FILES:
+            file = FILES[view.id()]
+            server_name = file.host or "remote server"
+            self.view.set_status("remotesub_status", "[{}]".format(server_name))
+        else:
+            self.view.erase_status("remotesub_status")
 
 
 class ConnectionHandler(socketserver.BaseRequestHandler):
@@ -238,7 +249,7 @@ class ConnectionHandler(socketserver.BaseRequestHandler):
         say('New connection from ' + str(self.client_address))
 
         session = Session(self.request)
-        self.request.send(b"Sublime Text 3 (remotesubl plugin)\n")
+        self.request.send(b"Sublime Text 3 (remote_subl plugin)\n")
 
         socket_fd = self.request.makefile("rb")
         while True:
@@ -266,7 +277,7 @@ def plugin_loaded():
     global server
 
     # Load settings
-    settings = sublime.load_settings("remotesubl.sublime-settings")
+    settings = sublime.load_settings("remote_subl.sublime-settings")
     port = settings.get("port", 52698)
     host = settings.get("host", "localhost")
 
@@ -274,19 +285,3 @@ def plugin_loaded():
     server = TCPServer((host, port), ConnectionHandler)
     Thread(target=server.serve_forever, args=[]).start()
     say('Server running on {}:{} ...'.format(host, str(port)))
-
-
-class RemoteSublUpdateStatusBarCommand(sublime_plugin.TextCommand):
-
-    def run(self, edit):
-
-        env = self.view.settings().get('remotesubl', {})
-        if env:
-            display_name = env['display-name']
-            if ":" in display_name:
-                server_name = os.path.basename(display_name.split(':')[0])
-            else:
-                server_name = "remote"
-            self.view.set_status("remotesub_status", "[{}]".format(server_name))
-        else:
-            self.view.erase_status("remotesub_status")

@@ -16,7 +16,7 @@
                                 "caption": "Settings",
                                 "command": "edit_settings",
                                 "args": {
-                                    "base_file": "${packages}/RemoteSubl/remotesubl.sublime-settings"
+                                    "base_file": "${packages}/RemoteSubl/remote_subl.sublime-settings"
                                 }
                             }
                         ]
