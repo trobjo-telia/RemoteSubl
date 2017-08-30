@@ -258,7 +258,7 @@ class ConnectionHandler(socketserver.BaseRequestHandler):
                 break
             session.parse_input(line)
 
-        say('Connection close.')
+        say('Connection from {} is closed.'.format(str(self.client_address)))
 
 
 class TCPServer(socketserver.ThreadingTCPServer):
