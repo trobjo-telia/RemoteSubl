@@ -56,23 +56,23 @@ class File:
             self.ready = True
 
     def close(self, remove=True):
-        self.session.socket.send(b"close\n")
-        self.session.socket.send(b"token: " + self.env['token'].encode("utf8") + b"\n")
-        self.session.socket.send(b"\n")
+        self.session.send("close")
+        self.session.send("token: {}".format(self.env['token']))
+        self.session.send("")
         if remove:
             os.unlink(self.temp_path)
             os.rmdir(self.temp_dir)
         self.session.try_close()
 
     def save(self):
-        self.session.socket.send(b"save\n")
-        self.session.socket.send(b"token: " + self.env['token'].encode("utf8") + b"\n")
+        self.session.send("save")
+        self.session.send("token: {}".format(self.env['token']))
         temp_file = open(self.temp_path, "rb")
         new_file = temp_file.read()
         temp_file.close()
-        self.session.socket.send(b"data: " + str(len(new_file)).encode("utf8") + b"\n")
-        self.session.socket.send(new_file)
-        self.session.socket.send(b"\n")
+        self.session.send("data: {:d}".format(len(new_file)))
+        self.session.send(new_file)
+        self.session.send("")
 
     def get_temp_dir(self):
         # First determine if the file has been sent before.
@@ -188,6 +188,11 @@ class Session:
             else:
                 self.file.host = None
                 self.file.base_name = v
+
+    def send(self, string):
+        if not isinstance(string, bytes):
+            string = string.encode("utf8")
+        self.socket.send(string + b"\n")
 
     def try_close(self):
         self.nconn -= 1
