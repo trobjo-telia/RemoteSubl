@@ -84,7 +84,7 @@ class File:
         # multiple files with the same basename to be edited at once without
         # overwriting each other.
         try:
-            return tempfile.mkdtemp(prefix='remote_subl-')
+            return tempfile.mkdtemp(prefix=(self.host or "remote_subl") + "-")
         except OSError as e:
             sublime.error_message(
                 'Failed to create remote_subl temporary directory! Error: {}'.format(e))
@@ -186,7 +186,8 @@ class Session:
                 self.file.host, self.file.base_name = v.split(":")
             else:
                 self.file.host = None
-                self.file.base_name = v
+        elif k == "token":
+            self.file.base_name = os.path.basename(v)
 
     def send(self, string):
         if not isinstance(string, bytes):
