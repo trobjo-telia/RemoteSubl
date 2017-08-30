@@ -72,7 +72,6 @@ class File:
         temp_file.close()
         self.session.send("data: {:d}".format(len(new_file)))
         self.session.send(new_file)
-        self.session.send("")
 
     def get_temp_dir(self):
         # First determine if the file has been sent before.
