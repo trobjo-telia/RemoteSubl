@@ -6,9 +6,10 @@ Comparing to rsub, the followings are enhanced:
 
 - support multiple files via `rmate foo bar`.
 - use the same view when opening the same file twice.
-- able to resume previous connection when it is lost.
-- better status bar messages when savning a file or when encountering errors.
-- improve the way to bring up Sublime Text on different platforms.
+- notify when connection lost.
+- resume previous connection when it was lost.
+- better status bar messages when saving file and when encountering errors.
+- bring up Sublime Text on different platforms.
 
 Why a new fork? It seems that the author of rsub is not actively maintaining that package.
 
