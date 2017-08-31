@@ -247,7 +247,7 @@ class RemoteSublUpdateStatusBarCommand(sublime_plugin.TextCommand):
             server_name = file.host or "remote server"
             self.view.set_status("remotesub_status", "[{}]".format(server_name))
         else:
-            self.view.erase_status("remotesub_status")
+            self.view.set_status("remotesub_status", "[connection lost]")
 
 
 class ConnectionHandler(socketserver.BaseRequestHandler):
@@ -283,6 +283,7 @@ class ConnectionHandler(socketserver.BaseRequestHandler):
 
         for vid in vid_to_pop:
             FILES.pop(vid)
+            sublime.View(vid).run_command("remote_subl_update_status_bar")
 
 
 class TCPServer(socketserver.ThreadingTCPServer):
