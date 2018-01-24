@@ -105,7 +105,7 @@ class File:
                 # Remove the file if it exists.
                 os.remove(self.temp_path)
                 os.rmdir(self.temp_dir)
-            except:
+            except Exception:
                 pass
 
             sublime.message_dialog(WRITE_TEMP_FILE_ERROR.format(e))
@@ -131,7 +131,7 @@ class File:
             try:
                 # connection may have lost
                 file.close(remove=False)
-            except:
+            except Exception:
                 pass
 
         # Add the file to the global list
@@ -218,7 +218,7 @@ class RemoteSublEventListener(sublime_plugin.EventListener):
                 sublime.set_timeout(
                     lambda: sublime.status_message("Saved {} to {}.".format(
                         base_name, host)))
-            except:
+            except Exception:
                 say('Error saving {} to {}.'.format(base_name, host))
                 sublime.set_timeout(
                     lambda: sublime.status_message(
@@ -232,7 +232,7 @@ class RemoteSublEventListener(sublime_plugin.EventListener):
                 file = FILES.pop(view.id())
                 file.close()
                 say('Closed {} in {}.'.format(base_name, host))
-            except:
+            except Exception:
                 say('Error closing {} in {}.'.format(base_name, host))
 
     def on_activated(self, view):
