@@ -53,6 +53,9 @@ ssh -R 52698:localhost:52698 user@example.com
 
 After running the server, you can just open the file on the remote system by
 
+(NOTE: you need to have opened Sublime on you local machine. 
+If not you get this error connect_to localhost port 52698: failed.)
+
 ```
 rmate test.txt
 ```
