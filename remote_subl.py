@@ -13,6 +13,7 @@ CREATE_TEMP_FILE_ERROR = "Failed to create remote_subl temporary directory! Erro
 WRITE_TEMP_FILE_ERROR = "Failed to write to temp file! Error: {}"
 CONNECTION_LOST = "Connection to {} is lost."
 FILES = {}
+LOST_FILES = {}
 server = None
 
 
@@ -81,6 +82,12 @@ class File:
         for f in FILES.values():
             if f.env["real-path"] and f.env["real-path"] == self.env["real-path"] and \
                     f.host and f.host == self.host:
+                return f.temp_dir
+
+        for vid, f in LOST_FILES.items():
+            if f.env["real-path"] and f.env["real-path"] == self.env["real-path"] and \
+                    f.host and f.host == self.host:
+                LOST_FILES.pop(vid)
                 return f.temp_dir
 
         # Create a secure temporary directory, both for privacy and to allow
@@ -228,8 +235,11 @@ class RemoteSublEventListener(sublime_plugin.EventListener):
         base_name = view.settings().get('remote_subl.base_name')
         if base_name:
             host = view.settings().get('remote_subl.host', "remote server")
+            vid = view.id()
+            if vid in LOST_FILES:
+                LOST_FILES.pop(vid)
             try:
-                file = FILES.pop(view.id())
+                file = FILES.pop(vid)
                 file.close()
                 say('Closed {} in {}.'.format(base_name, host))
             except Exception:
@@ -285,7 +295,7 @@ class ConnectionHandler(socketserver.BaseRequestHandler):
                 vid_to_pop.append(vid)
 
         for vid in vid_to_pop:
-            FILES.pop(vid)
+            LOST_FILES[vid] = FILES.pop(vid)
             sublime.View(vid).run_command("remote_subl_update_status_bar")
 
 
