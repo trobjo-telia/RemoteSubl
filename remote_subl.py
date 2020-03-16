@@ -146,6 +146,13 @@ class File:
 
         # Bring sublime to front by running `subl --command ""`
         subl("--command", "")
+
+        # Optionally set the color scheme
+        settings = sublime.load_settings("remote_subl.sublime-settings")
+        color_scheme = settings.get("color_scheme", None)
+        if color_scheme is not None:
+            subl("--command", 'set_setting {{"setting":"color_scheme","value":"{}"}}'.format(color_scheme))
+
         view.run_command("remote_subl_update_status_bar")
 
 

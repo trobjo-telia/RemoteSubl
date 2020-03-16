@@ -15,5 +15,14 @@
     /*
         display a dialog when connection is lost
     */
-    "pop_up_when_connection_lost": true
+    "pop_up_when_connection_lost": true,
+
+    /*
+        color scheme to use for remote windows
+
+        examples:
+        - null (use the default color scheme)
+        - "Packages/Color Scheme - Default/Monokai.tmTheme"
+    */
+    "color_scheme": null
 }
