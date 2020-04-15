@@ -94,3 +94,15 @@ Host example.com
 ```
 
 From now on, you only have to do `ssh example.com`.
+
+### PuTTY config
+
+Alternatively, if you're using PuTTY as your SSH client, before you connect to
+your host:
+
+1. Navigate to `Connection` > `SSH` > `Tunnels` in the left-hand navigation pane
+1. In the `Add new forwarded port:` section, add `52698` to `Source port` text field
+1. Then add `localhost:52698` in the `Destination` text field
+1. Select `Remote` checkbox instead of `Local`
+1. Click `Add` to add your forwarding information to the `Forwarded ports:` list
+1. Save your settings if you'd like, and then connect to your remote host
