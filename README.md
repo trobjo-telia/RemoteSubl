@@ -13,6 +13,7 @@ Comparing to rsub, the followings are enhanced:
 - resume previous connection when it was lost.
 - better status bar messages when saving file and when encountering errors.
 - bring up Sublime Text on different platforms.
+- ability to set a custom color scheme.
 
 Why a new fork? It seems that the author of rsub is not actively maintaining
 that package.
