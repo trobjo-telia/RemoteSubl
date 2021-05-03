@@ -310,7 +310,7 @@ class TCPServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
 
 
-def unload_handler():
+def plugin_unloaded():
     global server
     say('Killing server...')
     if server:
