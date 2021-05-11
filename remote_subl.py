@@ -164,10 +164,11 @@ class Session:
         self.file = None
 
     def parse_input(self, input_line):
-        if input_line.strip() == b"open":
-            self.file = File(self)
-            self.nconn += 1
-            return
+        if not self.parsing_data:
+            if input_line.strip() == b"open":
+                self.file = File(self)
+                self.nconn += 1
+                return
 
         if self.parsing_data:
             self.file.append(input_line)
