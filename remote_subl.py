@@ -331,6 +331,7 @@ def plugin_loaded():
 
     # Load settings
     settings = sublime.load_settings("remote_subl.sublime-settings")
+    print(f'{settings=}')
 
     port = settings.get("port", 52698)
     print(f'{port=}')
