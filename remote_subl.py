@@ -341,6 +341,9 @@ def plugin_loaded():
         host = "localhost"
 
     # Start server thread
+    print(f'{ConnectionHandler=}')
+    print(f'{port=}')
+    print(f'{host=}')
     server = TCPServer((host, port), ConnectionHandler)
     Thread(target=server.serve_forever, args=[]).start()
     say('Server running on {}:{} ...'.format(host, str(port)))
