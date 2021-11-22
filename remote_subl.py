@@ -146,10 +146,7 @@ class File:
 
         settings = sublime.load_settings("remote_subl.sublime-settings")
         on_activation_command = settings.get('on_activation_command')
-        print(on_activation_command)
-        print('pmd 1')
         if on_activation_command:
-            print("it's true")
             subprocess.Popen(on_activation_command).wait()
         else:
             # Bring sublime to front by running `subl --command ""`
@@ -332,24 +329,15 @@ def plugin_loaded():
 
     # Load settings
     settings = sublime.load_settings("remote_subl.sublime-settings")
-    has = settings.has('port')
-    print(f'{has=}')
-    print(f'{settings=}')
-
     port = settings.get("port", 52712)
-    print(f'{port=}')
     if port is None:
         port = 52712
-    print(f'{port=}')
 
     host = settings.get("host", "localhost")
     if host is None:
         host = "localhost"
 
     # Start server thread
-    print(f'{ConnectionHandler=}')
-    print(f'{port=}')
-    print(f'{host=}')
     server = TCPServer((host, port), ConnectionHandler)
     Thread(target=server.serve_forever, args=[]).start()
     say('Server running on {}:{} ...'.format(host, str(port)))
