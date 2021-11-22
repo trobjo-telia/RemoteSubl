@@ -146,7 +146,8 @@ class File:
 
         settings = sublime.load_settings("remote_subl.sublime-settings")
         on_activation_command = settings.get('on_activation_command')
-        if on_activation_command:
+        print('PMD 1')
+        if on_activation_command != []:
             subprocess.Popen(on_activation_command).wait()
         else:
             # Bring sublime to front by running `subl --command ""`
