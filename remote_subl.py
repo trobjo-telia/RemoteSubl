@@ -145,7 +145,9 @@ class File:
         FILES[view.id()] = self
 
         on_activation_command = view.settings().get('on_activation_command')
+        print(on_activation_command)
         if on_activation_command is True:
+            print("it's true")
             subprocess.Popen(on_activation_command, stdout=NULL)
         else:
             # Bring sublime to front by running `subl --command ""`
