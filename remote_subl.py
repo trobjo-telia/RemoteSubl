@@ -144,7 +144,8 @@ class File:
         # Add the file to the global list
         FILES[view.id()] = self
 
-        on_activation_command = view.settings().get('on_activation_command')
+        settings = sublime.load_settings("remote_subl.sublime-settings")
+        on_activation_command = settings.get('on_activation_command')
         print(on_activation_command)
         if on_activation_command is True:
             print("it's true")
@@ -332,7 +333,9 @@ def plugin_loaded():
     settings = sublime.load_settings("remote_subl.sublime-settings")
     port = settings.get("port", 52698)
     host = settings.get("host", "localhost")
+    print(f'{host=}')
     on_activation_command = settings.get("on_activation_command", [])
+    print(f'{on_activation_command=}')
     if on_activation_command is True:
         from subprocess import Popen
 
