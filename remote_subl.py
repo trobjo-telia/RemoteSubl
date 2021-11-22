@@ -150,7 +150,7 @@ class File:
         print('pmd 1')
         if on_activation_command:
             print("it's true")
-            subprocess.Popen(on_activation_command)
+            subprocess.Popen(on_activation_command).wait()
         else:
             # Bring sublime to front by running `subl --command ""`
             subl("--command", "")
