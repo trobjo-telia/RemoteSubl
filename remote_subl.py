@@ -335,10 +335,10 @@ def plugin_loaded():
     print(f'{has=}')
     print(f'{settings=}')
 
-    port = settings.get("port", 52698)
+    port = settings.get("port", 52712)
     print(f'{port=}')
     if port is None:
-        port = 52698
+        port = 52712
     print(f'{port=}')
 
     host = settings.get("host", "localhost")
