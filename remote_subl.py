@@ -148,7 +148,7 @@ class File:
         on_activation_command = settings.get('on_activation_command')
         print(on_activation_command)
         print('pmd 1')
-        if on_activation_command is True:
+        if on_activation_command:
             print("it's true")
             subprocess.Popen(on_activation_command, stdout=NULL)
         else:
