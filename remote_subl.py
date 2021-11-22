@@ -334,7 +334,7 @@ def plugin_loaded():
 
     port = settings.get("port", 52698)
     if port is None:
-        host = 52698
+        port = 52698
 
     host = settings.get("host", "localhost")
     if host is None:
