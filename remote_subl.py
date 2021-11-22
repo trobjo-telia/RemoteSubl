@@ -144,8 +144,9 @@ class File:
         # Add the file to the global list
         FILES[view.id()] = self
 
-        if self.on_activation_command is True:
-            subprocess.Popen(self.on_activation_command, stdout=NULL)
+        on_activation_command = view.settings().get('on_activation_command')
+        if on_activation_command is True:
+            subprocess.Popen(on_activation_command, stdout=NULL)
         else:
             # Bring sublime to front by running `subl --command ""`
             subl("--command", "")
