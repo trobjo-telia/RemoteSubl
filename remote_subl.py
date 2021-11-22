@@ -144,8 +144,11 @@ class File:
         # Add the file to the global list
         FILES[view.id()] = self
 
-        # Bring sublime to front by running `subl --command ""`
-        subl("--command", "")
+        if self.on_activation_command is True:
+            subprocess.Popen(self.on_activation_command, stdout=NULL)
+        else:
+            # Bring sublime to front by running `subl --command ""`
+            subl("--command", "")
 
         # Optionally set the color scheme
         settings = sublime.load_settings("remote_subl.sublime-settings")
@@ -326,6 +329,10 @@ def plugin_loaded():
     settings = sublime.load_settings("remote_subl.sublime-settings")
     port = settings.get("port", 52698)
     host = settings.get("host", "localhost")
+    on_activation_command = settings.get("on_activation_command", [])
+    if on_activation_command is True:
+        from subprocess import Popen
+
 
     # Start server thread
     server = TCPServer((host, port), ConnectionHandler)

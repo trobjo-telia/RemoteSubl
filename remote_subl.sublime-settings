@@ -24,5 +24,12 @@
         - null (use the default color scheme)
         - "Packages/Color Scheme - Default/Monokai.tmTheme"
     */
-    "color_scheme": null
+    "color_scheme": null,
+
+    /*
+    On Wayland on Linux there is no support for the request activate command.
+    So you can ask the compositor to activate the window for you. Example for
+    the Sway compositor: ["swaymsg", "[app_id=^sublime_text$]", "focus"]
+    */
+    "on_activation_command": []
 }
