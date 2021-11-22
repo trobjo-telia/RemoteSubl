@@ -333,8 +333,10 @@ def plugin_loaded():
     settings = sublime.load_settings("remote_subl.sublime-settings")
 
     port = settings.get("port", 52698)
+    print(f'{port=}')
     if port is None:
         port = 52698
+    print(f'{port=}')
 
     host = settings.get("host", "localhost")
     if host is None:
