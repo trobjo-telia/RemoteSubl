@@ -331,14 +331,14 @@ def plugin_loaded():
 
     # Load settings
     settings = sublime.load_settings("remote_subl.sublime-settings")
-    port = settings.get("port", 52698)
-    host = settings.get("host", "localhost")
-    print(f'{host=}')
-    on_activation_command = settings.get("on_activation_command", [])
-    print(f'{on_activation_command=}')
-    if on_activation_command is True:
-        from subprocess import Popen
 
+    port = settings.get("port", 52698)
+    if port is None:
+        host = 52698
+
+    host = settings.get("host", "localhost")
+    if host is None:
+        host = "localhost"
 
     # Start server thread
     server = TCPServer((host, port), ConnectionHandler)
